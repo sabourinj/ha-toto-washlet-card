@@ -1,0 +1,51 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<style>
+ body{font-family:Roboto,system-ui,sans-serif;background:#f4f4f6;margin:0;padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,420px));gap:16px;align-items:start;
+  --primary-color:#2f9be0;--card-background-color:#fff;--secondary-background-color:#f0f0f3;--primary-text-color:#212121;--secondary-text-color:#727272;--divider-color:#e0e0e0;--text-primary-color:#fff;--error-color:#db4437}
+ body.dark{background:#111;--card-background-color:#1c1c1e;--secondary-background-color:#2a2a2d;--primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b;--divider-color:#333}
+ ha-icon{display:inline-flex;align-items:center;justify-content:center;width:var(--mdc-icon-size,18px);height:var(--mdc-icon-size,18px)}
+ #log{grid-column:1/-1;font:12px ui-monospace,monospace;color:#555;white-space:pre-wrap}
+</style></head><body>
+<script>
+const MDI="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css";
+customElements.define("ha-card",class extends HTMLElement{constructor(){super();this.attachShadow({mode:"open"}).innerHTML=`<style>:host{display:block;background:var(--card-background-color);color:var(--primary-text-color);border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.10)}</style><slot></slot>`;}});
+customElements.define("ha-icon",class extends HTMLElement{
+  static get observedAttributes(){return ["icon"];}
+  connectedCallback(){this.attributeChangedCallback();}
+  attributeChangedCallback(){const r=this.shadowRoot||this.attachShadow({mode:"open"});
+    r.innerHTML=`<link rel="stylesheet" href="${MDI}"><i class="mdi ${(this.getAttribute("icon")||"").replace(":","-")}" style="font-size:var(--mdc-icon-size,18px);line-height:1"></i>`;}
+});
+</script>
+<script src="../dist/toto-washlet-card.js"></script>
+<script>
+if (location.hash === "#dark") document.body.classList.add("dark");
+window.calls = [];
+const hass = {
+  states: { "remote.bathroom_ir": { entity_id: "remote.bathroom_ir", state: "on", attributes: {} } },
+  callService: (d, s, data, target) => { calls.push([`${d}.${s}`, data, target]); log(); return Promise.resolve(); },
+};
+const configs = [
+  { name: "Primary Bath Washlet", remote: "remote.bathroom_ir", device: "toto" },
+  { name: "Guest Washlet", show_extras: true, hide: ["flush", "lid", "seat", "user_2", "dryer_temp"],
+    actions: { rear: "button.toto_rear", front: "button.toto_front", dry: "button.toto_dry", stop: "button.toto_stop",
+      pressure_up: "button.toto_pressure_up", pressure_down: "button.toto_pressure_down",
+      position_forward: "button.toto_position_forward", position_back: "button.toto_position_back",
+      oscillate: "script.toto_oscillate", pulsate: "script.toto_pulsate",
+      water_temp: "button.toto_water_temp", seat_temp: "button.toto_seat_temp", deodorize: "button.toto_deodorize",
+      user_1: { action: "esphome.bathroom_ir_send_nec", data: { address: 0x0, command: 0x1 } } } },
+  {},
+];
+for (const c of configs) {
+  const el = document.createElement("toto-washlet-card");
+  el.setConfig(c); el.hass = hass; document.body.appendChild(el);
+}
+const pre = document.createElement("div"); pre.id = "log"; document.body.appendChild(pre);
+if (location.hash === "#shot") {
+  const cards = document.querySelectorAll("toto-washlet-card");
+  cards[2].remove(); pre.remove();
+  const q = (i, k) => cards[i].shadowRoot.querySelector(`[data-cmd=${k}]`);
+  q(0, "rear").click(); q(0, "pressure_up").click(); q(1, "front").click(); q(1, "position_back").click();
+}
+function log() { pre.textContent = calls.slice(-6).map((c) => JSON.stringify(c)).join("\n"); }
+</script></body></html>
